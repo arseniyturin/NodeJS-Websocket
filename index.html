@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+	<meta http-equiv="Pragma" content="no-cache" />
+	<meta http-equiv="Expires" content="0" />
+	<title>Circles</title>
+  <style>
+		html, body {
+			margin: 0;
+			padding: 0;
+			color: #444;
+			font-family: arial;
+		}
+		.ball {
+			width: 100px;
+			height: 100px;
+			position: absolute;
+			border-radius: 55px;
+			opacity: .7;
+    }
+
+		.movableBall {
+			cursor: move;
+			z-index: 1000;
+		}
+		.me {
+			font-weight: bold;
+			color: #222;
+		}
+
+		.movableBall:hover {
+			opacity: 0.9;
+		}
+
+		#users {
+			padding: 10px;
+			border: 1px #f0f0f0 solid;
+			position: absolute;
+			top: 14px;
+			left: 14px;
+			z-index: 0;
+		}
+		.user {
+			padding: 4px;
+		}
+		.userBall {
+			width: 20px;
+			height: 20px;
+			border-radius: 10px;
+			display: inline-block;
+			vertical-align: top;
+			opacity: .7;
+		}
+		.userName {
+			user-select: none;
+			display: inline-block;
+			font-size: 13px;
+			vertical-align: top;
+			margin-top: 3px;
+			margin-left: 8px;
+			color: #555;
+		}
+
+
+  </style>
+</head>
+<body>
+<div id="users"></div>
+</body>
+<script type="text/javascript">
+
+	const address = 'ws://0.0.0.0:8080';
+	const protocol = 'echo-protocol';
+  const socket = new WebSocket(address, protocol);
+	const stringify = (e) => { return JSON.stringify(e) }
+	const parse = (e) => { return JSON.parse(e) }
+	const random = (e) => { return Math.round(Math.random()*e) }
+	const generateColor = () => { return 'rgba(' +random(255)+ ',' +random(255)+ ',' +random(255)+ ')' }
+
+	const ballOffset = (e) => {
+		offsetX = e.clientX - myBall.offsetLeft;
+		offsetY = e.clientY - myBall.offsetTop;
+	}
+
+	const ballOffsetMobile = (e) => {
+		offsetX = e.touches[0].clientX - myBall.offsetLeft;
+		offsetY = e.touches[0].clientY - myBall.offsetTop;
+	}
+
+	function loadOthers(others) {
+		for(let i in others) {
+
+				if (i != username) {
+					createBall(i, others[i][1], others[i][2]);
+					addUser(i, others[i][1]);
+				}
+
+		}
+	}
+
+	function addUser(username, color) {
+		let div = document.createElement('div');
+		div.classList.add('user');
+		div.id = username + '_menu';
+		div.innerHTML = '<div class="userBall" style="background-color: '+color+'"></div><div class="userName">'+username+'</div>';
+		let usersDiv = document.getElementById('users');
+		usersDiv.appendChild(div);
+
+	}
+	function removeUser(username) {
+		document.getElementById(username+'_menu').remove();
+		document.getElementById(username).remove();
+		delete this.users[username];
+	}
+
+	let username = '';
+	let users = {};
+	let balls = {};
+  let offsetX = 0;
+  let offsetY = 0;
+  let mouseX = 0;
+  let mouseY = 0;
+	let myBall = undefined;
+
+	function getCoords(id) {
+		let e = document.getElementById(id);
+		let x = e.offsetLeft;
+		let y = e.offsetTop;
+		return [y, x];
+	}
+
+	function createMyBall(id) {
+		myBall = document.createElement('div');
+		myBall.id = id;
+		myBall.classList.add('ball');
+		myBall.classList.add('movableBall');
+		myBall.style.backgroundColor = generateColor();
+		myBall.style.top = random(200)+'px';
+		myBall.style.left = random(200)+'px';
+		document.body.appendChild(myBall);
+	}
+
+	function createBall(username, color, coords) {
+		let div = document.createElement('div');
+		div.id = username;
+		div.classList.add('ball');
+		div.style.backgroundColor = color;
+		div.style.top = coords[0] + 'px';
+		div.style.left = coords[1] + 'px';
+		document.body.appendChild(div);
+	}
+
+  function drag(e) {
+    mouseX = e.clientX;
+    mouseY = e.clientY;
+    myBall.style.top = (mouseY - offsetY) + "px";
+    myBall.style.left = (mouseX - offsetX) + "px";
+		ballOffset(e);
+		let message = {'move': {'username': username, 'coords': [myBall.offsetTop, myBall.offsetLeft]}}
+    socket.send(stringify(message));
+  }
+
+
+	function dragMobile(e) {
+		mouseX = e.touches[0].clientX;
+    mouseY = e.touches[0].clientY;
+    myBall.style.top = (mouseY - offsetY) + "px";
+    myBall.style.left = (mouseX - offsetX) + "px";
+		ballOffsetMobile(e);
+		let message = {'move': {'username': username, 'coords': [myBall.offsetTop, myBall.offsetLeft]}}
+		socket.send(stringify(message));
+}
+
+  // Connection opened
+  socket.addEventListener('open', function (event) {
+
+		const usernames = ['Billy','Bobby','Mikey','Jimmy','Sean','Sandy','Peter','Jessie','Amanda','Particia','Lisa','Carol','Amy','Anna','Olivia','Megan','Noah','Lilly','Bryan','Alice','Doris','Wayne','Bradley','Louis','Alexis','Rose','Sophia'];
+		username = usernames[random(usernames.length)] + '_' + random(10);
+
+		const title = document.getElementsByTagName('title');
+
+		title[0].innerText = 'Circles - ' + username;
+
+		createMyBall(username);
+		let coords = getCoords(username);
+		let color = getComputedStyle(myBall)['backgroundColor'];
+		let message = {'init': [username, color, coords]};
+
+		socket.send(stringify(message));
+
+		addUser(username, color);
+
+		let me = document.getElementById(username+'_menu');
+		me.classList.add('me');
+
+		myBall.addEventListener('mousedown', (e) => {
+	    document.addEventListener('mousemove', drag);
+			ballOffset(e);
+	  });
+
+	  myBall.addEventListener('mouseup', () => {
+	    document.removeEventListener('mousemove', drag);
+	  });
+
+
+		// Mobile start drawing
+		myBall.addEventListener('touchstart', function(e){
+			e.preventDefault();
+			ballOffsetMobile(e);
+		});
+
+		// Mobile drawing
+		myBall.addEventListener('touchmove', function(e){
+			e.preventDefault();
+			dragMobile(e);
+		});
+
+  });
+
+
+  // Listen for messages
+  socket.addEventListener('message', function (event) {
+
+			// Parse Incoming Message
+      let message = parse(event.data);
+
+			// Decide what action to take
+			switch(Object.keys(message)[0]) {
+
+				// Coordinates received
+        case 'move':
+					if (message['move']['username'] == username) {
+						myBall.style.top = message['move']['coords'][0] + 'px';
+						myBall.style.left = message['move']['coords'][1] + 'px';
+					}
+					else {
+						let other = document.getElementById(message['move']['username']);
+						other.style.top = message['move']['coords'][0] + 'px';
+						other.style.left = message['move']['coords'][1] + 'px';
+					}
+
+          break;
+
+				case 'loadOthers':
+				 	loadOthers(message['loadOthers']);
+					break
+
+				case 'init':
+					if (message['init'][0]==username) {
+
+					} else {
+						console.log(message['init'][0]+' joined');
+						createBall(message['init'][0], message['init'][1], message['init'][2]);
+						addUser(message['init'][0], message['init'][1]);
+					}
+
+					break;
+
+				case 'offline':
+					console.log(message['offline']+' left');
+					removeUser(message['offline']);
+					break;
+
+      }
+
+
+  });
+
+	window.addEventListener('unload', function(){
+		socket.send(stringify({'offline': username}));
+		removeUser(message['offline']);
+
+	});
+
+
+</script>
+</html>
