@@ -35,6 +35,7 @@ ws.on('request', function(request) {
 
   // Connecting
   var connection = request.accept('echo-protocol', request.origin);
+
   connection.on('message', message);
 
   function message(incoming) {
@@ -47,28 +48,32 @@ ws.on('request', function(request) {
         // User connected
         case 'init':
           // Add new user to the list
-          users[message['init'][0]] = [message['init'][0], message['init'][1], message['init'][2]];
+          users[message['init']['username']] = { 'color': message['init']['color'], 'coords': message['init']['coords'] };
           // Add new connection to the list
-          connections[message['init'][0]] = [message['init'][0], connection]
+          connections[message['init']['username']] = connection;
           // Broadcast new user to existing users
-          for(let i in connections) { connections[i][1].sendUTF(stringify(message)); }
+          for(let i in connections) { connections[i].sendUTF( stringify(message) ) }
           // Send existing users to the new user
-          connections[message['init'][0]][1].sendUTF(stringify({'loadOthers': users}));
+          connections[message['init']['username']].sendUTF( stringify( {'loadOthers': users} ) );
+          console.log('Users: '+ Object.keys(users));
           break;
 
         // User moved circle
         case 'move':
           // Add user coordinates
-          users[message['move']['username']][2] = message['move']['coords'];
+          users[message['move']['username']]['coords'] = message['move']['coords'];
           // Broadcast user coordinates to all users
-          for(let i in connections) { connections[i][1].sendUTF(stringify(message)); }
+          for(let i in connections) {
+            connections[i].sendUTF(stringify(message));
+          }
+
           break;
 
         // User disconnected
         case 'offline':
           delete users[message['offline']];
-          for(let i in connections) { connections[i][1].sendUTF(stringify(message)); }
-          console.log(Object.keys(users));
+          for(let i in connections) { connections[i].sendUTF(stringify(message)); }
+          console.log('Users: '+ Object.keys(users));
           break;
 
       }
@@ -77,7 +82,7 @@ ws.on('request', function(request) {
   }
 
   connection.on('close', function(reasonCode, description) {
-    console.log((new Date()) + ' Peer ' + connection.remoteAddress + ' disconnected.');
+    console.log((new Date()) + ' | User disconnected.');
   });
 
 
