@@ -10,9 +10,14 @@
 
 2. In terminal locate directory with app and run: `npm install websocket`
 
-3. Finally run: `node app.js`
+3. Run: `node app.js`
+
+4. Finally open index.html
+
 
 App will run on localhost with 8080 port. Feel free to edit port number.
+
+Each time you open new tab with index.html you'll add new user to the app. Each user can control their own circle and others will see changes immediately
 
 
 

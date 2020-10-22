@@ -35,7 +35,6 @@ ws.on('request', function(request) {
 
   // Connecting
   var connection = request.accept('echo-protocol', request.origin);
-
   connection.on('message', message);
 
   function message(incoming) {
@@ -45,27 +44,28 @@ ws.on('request', function(request) {
       let message = parse(incoming.utf8Data);
       switch(Object.keys(message)[0]) {
 
+        // User connected
         case 'init':
           // Add new user to the list
           users[message['init'][0]] = [message['init'][0], message['init'][1], message['init'][2]];
-          console.log(message['init'][0]+ ' from web : ' + message['init'][2]);
           // Add new connection to the list
           connections[message['init'][0]] = [message['init'][0], connection]
-          // 'init' - Broadcast new user to others
+          // Broadcast new user to existing users
           for(let i in connections) { connections[i][1].sendUTF(stringify(message)); }
-          // 'loadOthers' - Load all users to the new user
+          // Send existing users to the new user
           connections[message['init'][0]][1].sendUTF(stringify({'loadOthers': users}));
           break;
 
+        // User moved circle
         case 'move':
-          console.log(message['move']['username'], message['move']['coords']);
+          // Add user coordinates
           users[message['move']['username']][2] = message['move']['coords'];
+          // Broadcast user coordinates to all users
           for(let i in connections) { connections[i][1].sendUTF(stringify(message)); }
-          console.log(message['move']['username'] + ' from users : ' + users[message['move']['username']][2]);
           break;
 
+        // User disconnected
         case 'offline':
-          console.log('User '+message['offline']+' left');
           delete users[message['offline']];
           for(let i in connections) { connections[i][1].sendUTF(stringify(message)); }
           console.log(Object.keys(users));
@@ -73,8 +73,7 @@ ws.on('request', function(request) {
 
       }
 
-    } else if (message.type === 'binary') {
-    }
+    } /*else if (message.type === 'binary') {}*/
   }
 
   connection.on('close', function(reasonCode, description) {
