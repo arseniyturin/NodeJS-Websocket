@@ -3,7 +3,7 @@ const protocol = 'echo-protocol';
 const socket = new WebSocket(address, protocol);
 const stringify = (e) => { return JSON.stringify(e) }
 const parse = (e) => { return JSON.parse(e) }
-const random = (e) => { return Math.round(Math.random()*e)-1 }
+const random = (e) => { return Math.round(Math.random()*e) }
 const generateColor = () => { return 'rgba(' +random(255)+ ',' +random(255)+ ',' +random(255)+ ')' }
 
 let username = '';
@@ -14,6 +14,7 @@ let offsetY = 0;
 let mouseX = 0;
 let mouseY = 0;
 let myBall = undefined;
+const wall = document.getElementById('wall');
 
 const ballOffset = (e) => {
   offsetX = e.clientX - myBall.offsetLeft;
@@ -28,7 +29,7 @@ const ballOffsetMobile = (e) => {
 function loadOthers(others) {
   for(let i in others) {
       if (i != username) {
-        createBall(i, others[i]['color'], others[i]['coords']);
+        createBall(i, others[i]['color'], others[i]['size'], others[i]['coords']);
         addUser(i, others[i]['color']);
       }
   }
@@ -59,6 +60,12 @@ function getCoords(id) {
   return [y, x];
 }
 
+function getSize(id) {
+  let e = document.getElementById(id);
+  let width = e.offsetWidth;
+  return width;
+}
+
 // Create personal ball
 function createMyBall(id) {
   myBall = document.createElement('div');
@@ -68,18 +75,27 @@ function createMyBall(id) {
   myBall.style.backgroundColor = generateColor();
   myBall.style.top = random(200)+'px';
   myBall.style.left = random(200)+'px';
+  let size = (20+random(180))+'px';
+  myBall.style.width = size;
+  myBall.style.height = size;
   document.body.appendChild(myBall);
 }
 
 // Create users ball
-function createBall(username, color, coords) {
+function createBall(username, color, size, coords) {
   let div = document.createElement('div');
   div.id = username;
   div.classList.add('ball');
+  div.style.width = size + 'px';
+  div.style.height = size + 'px';
   div.style.backgroundColor = color;
   div.style.top = coords[0] + 'px';
   div.style.left = coords[1] + 'px';
   document.body.appendChild(div);
+}
+
+function sendMessage(message) {
+	socket.send(stringify({'wall': message}));
 }
 
 // Move ball
@@ -109,7 +125,7 @@ socket.addEventListener('open', function (event) {
 
   // Generate random username
   const usernames = ['Billy','Bobby','Mikey','Jimmy','Sean','Sandy','Peter','Jessie','Amanda','Particia','Lisa','Carol','Amy','Anna','Olivia','Megan','Noah','Lilly','Bryan','Alice','Doris','Wayne','Bradley','Louis','Alexis','Rose','Sophia'];
-  username = usernames[random(usernames.length)] + '_' + random(10);
+  username = usernames[random(usernames.length-1)] + '_' + random(10);
   const title = document.getElementsByTagName('title');
   title[0].innerText = 'Circles - ' + username;
 
@@ -117,13 +133,14 @@ socket.addEventListener('open', function (event) {
   createMyBall(username);
   let coords = getCoords(username);
   let color = getComputedStyle(myBall)['backgroundColor'];
-  let message = {'init': {'username': username, 'color': color, 'coords': coords}};
+  let size = getSize(username);
+  let message = {'init': {'username': username, 'color': color, 'size': size, 'coords': coords}};
   addUser(username, color);
   let me = document.getElementById(username+'_menu');
   me.classList.add('me');
   socket.send(stringify(message));
 
-  myBall.addEventListener('mousedown', (e) => {
+  myBall.addEventListener('mousedown', () => {
     document.addEventListener('mousemove', drag);
     ballOffset(e);
   });
@@ -158,7 +175,7 @@ socket.addEventListener('message', function (event) {
       case 'init':
         if (message['init']['username'] != username) {
           console.log(message['init']['username']+' joined');
-          createBall(message['init']['username'], message['init']['color'], message['init']['coords']);
+          createBall(message['init']['username'], message['init']['color'], message['init']['size'], message['init']['coords']);
           addUser(message['init']['username'], message['init']['color']);
         }
         break;
@@ -175,6 +192,11 @@ socket.addEventListener('message', function (event) {
         loadOthers(message['loadOthers']);
         break;
 
+
+      case 'wall':
+        wall.innerText = message['wall'];
+        break;
+
       case 'offline':
         console.log(message['offline']+' left');
         removeUser(message['offline']);
@@ -182,8 +204,15 @@ socket.addEventListener('message', function (event) {
     }
 });
 
+/*
+window.addEventListener('beforeunload', (event) => {
+  event.preventDefault();
+  socket.send(stringify({'offline': username}));
+  //removeUser(message['offline']);
+});
+
 window.addEventListener('unload', function(){
   socket.send(stringify({'offline': username}));
   removeUser(message['offline']);
-
 });
+*/
