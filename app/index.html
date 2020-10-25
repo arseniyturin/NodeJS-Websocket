@@ -18,24 +18,26 @@
 			border-radius: 200px;
 			opacity: .5;
     }
-		#wall {
-			text-align:center;
-			z-index: 0;
-			user-select: none;
-			padding: 20px;
-			font-size: 18px;
-			color: #777;
-		}
+    #wall {
+      text-align:center;
+      z-index: 0;
+      user-select: none;
+      padding: 20px;
+      font-size: 18px;
+      color: #777;
+    }
 		.movableBall {
 			cursor: move;
-			z-index: 1000;
+			z-index: 100;
 		}
 		.me {
 			font-weight: bold;
+			cursor: pointer;
 		}
 		.me userName {
 			color: #333;
 		}
+
 		.movableBall:hover {
 			opacity: 0.7;
 		}
@@ -58,6 +60,17 @@
 			vertical-align: top;
 			opacity: .5;
 		}
+		#blank {
+		  position: absolute;
+		  width: 100%;
+		  height: 100%;
+		  top: 0;
+		  left: 0;
+		  background-color: #000;
+		  opacity: .5;
+		  visibility: hidden;
+		  z-index: 150;
+		}
 		.userName {
 			user-select: none;
 			display: inline-block;
@@ -67,11 +80,32 @@
 			margin-left: 8px;
 			color: #555;
 		}
+		#changeUsername_field {
+		  display: block;
+		  position: absolute;
+		  top: 45%;
+		  left: 50%;
+      width: 360px;
+      margin-left: -190px;
+      padding: 5px 10px;
+      border: 1px #767676 solid;
+      font-size: 22px;
+      border-radius: 4px;
+      box-shadow: 0px 2px 7px #5d5d5d;
+      box-sizing: border-box;
+      z-index: 151;
+      visibility: hidden;  
+		}
+		#changeUsername_field:focus {
+		  outline: none;
+		}
   </style>
 </head>
 <body>
 <div id="users"></div>
 <div id="wall"></div>
+<div id="blank"></div>
+<input type="text" id="changeUsername_field" />
 </body>
 <script src="client.js"></script>
 </html>

@@ -2,7 +2,7 @@
 
 ### Play with friends by moving colorful circles around real-time :)
 
-![](img/circles.png)
+![Play](img/play.gif)
 
 ### How to Install
 

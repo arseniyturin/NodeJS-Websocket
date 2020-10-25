@@ -47,23 +47,23 @@ ws.on('request', function(request) {
 
         // User connected
         case 'init':
-          connection.username = message['init']['username'];
-          console.log('User ' + connection.username + ' joined');
+          connection.userid = message['init']['userid'];
+          console.log('User ' + connection.userid + ' joined');
           // Add new user to the list
-          users[message['init']['username']] = { 'color': message['init']['color'], 'size': message['init']['size'], 'coords': message['init']['coords'] };
+          users[message['init']['userid']] = {'username': message['init']['username'], 'color': message['init']['color'], 'size': message['init']['size'], 'coords': message['init']['coords'] };
           // Add new connection to the list
-          connections[message['init']['username']] = connection;
+          connections[message['init']['userid']] = connection;
           // Broadcast new user to existing users
           for(let i in connections) { connections[i].sendUTF( stringify(message) ) }
           // Send existing users to the new user
-          connections[message['init']['username']].sendUTF( stringify( {'loadOthers': users} ) );
+          connections[message['init']['userid']].sendUTF( stringify( {'loadOthers': users} ) );
           //console.log('Users: '+ Object.keys(users));
           break;
 
         // User moved circle
         case 'move':
           // Add user coordinates
-          users[message['move']['username']]['coords'] = message['move']['coords'];
+          users[message['move']['userid']]['coords'] = message['move']['coords'];
           // Broadcast user coordinates to all users
           for(let i in connections) {
             connections[i].sendUTF(stringify(message));
@@ -74,16 +74,23 @@ ws.on('request', function(request) {
         case 'wall':
           for(let i in connections) { connections[i].sendUTF(stringify(message)); }
           break;
+
+        case 'changeUsername':
+          users[message['changeUsername']['userid']]['username'] = message['changeUsername']['username'];
+          for(let i in connections) {
+            connections[i].sendUTF(stringify(message));
+          }
+          break;
       }
 
     } /*else if (message.type === 'binary') {}*/
   }
 
   connection.on('close', function(reasonCode, description) {
-    console.log('User ' + connection.username + ' left');
-    for(let i in connections) { connections[i].sendUTF(stringify({'offline': connection.username})); }
-    delete users[connection.username];
-    delete connections[connection.username];
+    console.log('User ' + connection.userid + ' left');
+    for(let i in connections) { connections[i].sendUTF(stringify({'offline': connection.userid})); }
+    delete users[connection.userid];
+    delete connections[connection.userid];
   });
 
 });

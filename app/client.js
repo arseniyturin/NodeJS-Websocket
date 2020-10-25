@@ -7,14 +7,15 @@ const random = (e) => { return Math.round(Math.random()*e) }
 const generateColor = () => { return 'rgba(' +random(255)+ ',' +random(255)+ ',' +random(255)+ ')' }
 
 let username = '';
-let users = {};
-let balls = {};
+let userid = '';
 let offsetX = 0;
 let offsetY = 0;
 let mouseX = 0;
 let mouseY = 0;
 let myBall = undefined;
 const wall = document.getElementById('wall');
+const changeUsername_field = document.getElementById('changeUsername_field');
+const blank = document.getElementById('blank');
 
 const ballOffset = (e) => {
   offsetX = e.clientX - myBall.offsetLeft;
@@ -28,48 +29,78 @@ const ballOffsetMobile = (e) => {
 
 function loadOthers(others) {
   for(let i in others) {
-      if (i != username) {
+      if (i != userid) {
         createBall(i, others[i]['color'], others[i]['size'], others[i]['coords']);
-        addUser(i, others[i]['color']);
+        addUser(others[i]['username'], i, others[i]['color']);
       }
   }
 }
 
+function generateUser() {
+  let userid = 'u' + (new Date()).getTime().toString().substr(10) + (new Date()).getMilliseconds().toString();
+  // Generate random username
+  const usernames = ['James','Mary','John','Patricia','Robert','Jennifer','Michael','Linda','William',
+                    'Elizabeth','David','Barbara','Richard','Susan','Joseph','Jessica','Thomas','Sarah',
+                    'Charles','Karen','Daniel','Lisa','Mark','Emily','Andrew','Donna','Kevin','Carol',
+                    'Joshua','Melissa','Timothy','Amy','Gary','Angela','Larry','Nicole','Frank','Ruth'];
+
+  const title = document.getElementsByTagName('title');
+  if(getCookie()['circles'] != undefined) {
+    username = getCookie()['circles'];
+  }
+  else {
+    username = usernames[random(usernames.length-1)];
+    //setCookie(username);
+  }
+
+  title[0].innerText = 'Circles - ' + username;
+  return [username, userid];
+}
+
+function setCookie(username) {
+  let later = new Date().getTime() * 2;
+  document.cookie = 'circles='+username+';expires=' +(new Date(later)).toUTCString();
+  console.log('Set Cookie for '+username);
+}
+
+function getCookie() {
+  return Object.fromEntries(document.cookie.split(';').map((e)=>e.trim().split('=')));
+}
+
 // Add username to the menu
-function addUser(username, color) {
+function addUser(username, userid, color) {
   let div = document.createElement('div');
   div.classList.add('user');
-  div.id = username + '_menu';
+  div.id = userid + '_menu';
   div.innerHTML = '<div class="userBall" style="background-color: '+color+'"></div><div class="userName">'+username+'</div>';
   let usersDiv = document.getElementById('users');
   usersDiv.appendChild(div);
 }
 
 // Remove username and a ball
-function removeUser(username) {
-  document.getElementById(username+'_menu').remove();
-  document.getElementById(username).remove();
-  delete this.users[username];
+function removeUser(userid) {
+  document.getElementById(userid+'_menu').remove();
+  document.getElementById(userid).remove();
 }
 
 // Get current ball coordinates
-function getCoords(id) {
-  let e = document.getElementById(id);
+function getCoords(userid) {
+  let e = document.getElementById(userid);
   let x = e.offsetLeft;
   let y = e.offsetTop;
   return [y, x];
 }
 
-function getSize(id) {
-  let e = document.getElementById(id);
+function getSize(userid) {
+  let e = document.getElementById(userid);
   let width = e.offsetWidth;
   return width;
 }
 
 // Create personal ball
-function createMyBall(id) {
+function createMyBall(userid) {
   myBall = document.createElement('div');
-  myBall.id = id;
+  myBall.id = userid;
   myBall.classList.add('ball');
   myBall.classList.add('movableBall');
   myBall.style.backgroundColor = generateColor();
@@ -82,9 +113,9 @@ function createMyBall(id) {
 }
 
 // Create users ball
-function createBall(username, color, size, coords) {
+function createBall(userid, color, size, coords) {
   let div = document.createElement('div');
-  div.id = username;
+  div.id = userid;
   div.classList.add('ball');
   div.style.width = size + 'px';
   div.style.height = size + 'px';
@@ -105,7 +136,7 @@ function drag(e) {
   myBall.style.top = (mouseY - offsetY) + "px";
   myBall.style.left = (mouseX - offsetX) + "px";
   ballOffset(e);
-  let message = {'move': {'username': username, 'coords': [myBall.offsetTop, myBall.offsetLeft]}}
+  let message = {'move': {'userid': userid, 'coords': [myBall.offsetTop, myBall.offsetLeft]}}
   socket.send(stringify(message));
 }
 
@@ -116,7 +147,7 @@ function dragMobile(e) {
   myBall.style.top = (mouseY - offsetY) + "px";
   myBall.style.left = (mouseX - offsetX) + "px";
   ballOffsetMobile(e);
-  let message = {'move': {'username': username, 'coords': [myBall.offsetTop, myBall.offsetLeft]}}
+  let message = {'move': {'userid': userid, 'coords': [myBall.offsetTop, myBall.offsetLeft]}}
   socket.send(stringify(message));
 }
 
@@ -124,23 +155,45 @@ function dragMobile(e) {
 socket.addEventListener('open', function (event) {
 
   // Generate random username
-  const usernames = ['Billy','Bobby','Mikey','Jimmy','Sean','Sandy','Peter','Jessie','Amanda','Particia','Lisa','Carol','Amy','Anna','Olivia','Megan','Noah','Lilly','Bryan','Alice','Doris','Wayne','Bradley','Louis','Alexis','Rose','Sophia'];
-  username = usernames[random(usernames.length-1)] + '_' + random(10);
-  const title = document.getElementsByTagName('title');
-  title[0].innerText = 'Circles - ' + username;
+  [username, userid] = generateUser();
+  // Create personal ball
+  createMyBall(userid);
 
-  // Create personam ball
-  createMyBall(username);
-  let coords = getCoords(username);
+  let coords = getCoords(userid);
   let color = getComputedStyle(myBall)['backgroundColor'];
-  let size = getSize(username);
-  let message = {'init': {'username': username, 'color': color, 'size': size, 'coords': coords}};
-  addUser(username, color);
-  let me = document.getElementById(username+'_menu');
+  let size = getSize(userid);
+
+  let message = {'init': {'username': username, 'userid': userid, 'color': color, 'size': size, 'coords': coords}};
+  addUser(username, userid, color);
+  let me = document.getElementById(userid+'_menu');
   me.classList.add('me');
   socket.send(stringify(message));
+  changeUsername_field.value = username;
 
-  myBall.addEventListener('mousedown', () => {
+  me.addEventListener('click', () => {
+    changeUsername_field.style.visibility = 'visible';
+    changeUsername_field.focus();
+    blank.style.visibility = 'visible';
+  });
+
+  function changeUsername() {
+    setCookie(changeUsername_field.value);
+    changeUsername_field.style.visibility = 'hidden';
+    blank.style.visibility = 'hidden';
+    socket.send(stringify({'changeUsername': {'userid': userid, 'username': changeUsername_field.value}}));
+  }
+
+  changeUsername_field.addEventListener('keypress', (event) => {
+      if(event.keyCode === 13 || event.key === 'Enter' ) {
+        changeUsername();
+      }
+    });
+
+  blank.addEventListener('click', (e) => {
+    changeUsername();
+  });
+
+  myBall.addEventListener('mousedown', (e) => {
     document.addEventListener('mousemove', drag);
     ballOffset(e);
   });
@@ -173,16 +226,16 @@ socket.addEventListener('message', function (event) {
     switch(Object.keys(message)[0]) {
 
       case 'init':
-        if (message['init']['username'] != username) {
+        if (message['init']['userid'] != userid) {
           console.log(message['init']['username']+' joined');
-          createBall(message['init']['username'], message['init']['color'], message['init']['size'], message['init']['coords']);
-          addUser(message['init']['username'], message['init']['color']);
+          addUser(message['init']['username'], message['init']['userid'], message['init']['color']);
+          createBall(message['init']['userid'], message['init']['color'], message['init']['size'], message['init']['coords']);
         }
         break;
 
       case 'move':
-        if(message['move']['username'] != username) {
-          let ball = document.getElementById(message['move']['username']);
+        if(message['move']['userid'] != userid) {
+          let ball = document.getElementById(message['move']['userid']);
           ball.style.top = message['move']['coords'][0] + 'px';
           ball.style.left = message['move']['coords'][1] + 'px';
         }
@@ -197,22 +250,15 @@ socket.addEventListener('message', function (event) {
         wall.innerText = message['wall'];
         break;
 
+      case 'changeUsername':
+        let uid = document.getElementById(message['changeUsername']['userid']+'_menu');
+        uid.lastElementChild.innerText = message['changeUsername']['username'];
+        break;
+
+
       case 'offline':
         console.log(message['offline']+' left');
         removeUser(message['offline']);
         break;
     }
 });
-
-/*
-window.addEventListener('beforeunload', (event) => {
-  event.preventDefault();
-  socket.send(stringify({'offline': username}));
-  //removeUser(message['offline']);
-});
-
-window.addEventListener('unload', function(){
-  socket.send(stringify({'offline': username}));
-  removeUser(message['offline']);
-});
-*/
